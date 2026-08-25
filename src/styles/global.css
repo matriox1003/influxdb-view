@@ -1,0 +1,487 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  font-size: 16px;
+  overflow: hidden;
+  background: var(--mantine-color-body);
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   设计令牌：统一间距、圆角，跟随 Mantine 亮/暗色变量
+   ============================================================ */
+:root {
+  --iv-spacing-xs: 4px;
+  --iv-spacing-sm: 8px;
+  --iv-spacing-md: 12px;
+  --iv-spacing-lg: 16px;
+
+  --iv-radius-sm: 4px;
+  --iv-radius-md: 6px;
+
+  --iv-bar-height: 44px;
+  --iv-sidebar-width: 248px;
+
+  /* 表面色阶（亮色：灰白系） */
+  --iv-bg-app: var(--mantine-color-gray-0);
+  --iv-bg-panel: var(--mantine-color-white);
+  --iv-bg-elevated: var(--mantine-color-white);
+  --iv-border: var(--mantine-color-gray-3);
+  --iv-border-light: var(--mantine-color-gray-2);
+  --iv-text-1: var(--mantine-color-text);
+  --iv-text-2: var(--mantine-color-dimmed);
+  --iv-text-3: var(--mantine-color-dimmed);
+  /* 黑白按钮：亮色黑底白字 */
+  --iv-btn-bg: var(--mantine-color-black);
+  --iv-btn-color: var(--mantine-color-white);
+  --iv-btn-bg-hover: var(--mantine-color-gray-8);
+}
+
+[data-mantine-color-scheme='dark'] {
+  --iv-bg-app: var(--mantine-color-dark-8);
+  --iv-bg-panel: var(--mantine-color-dark-7);
+  --iv-bg-elevated: var(--mantine-color-dark-6);
+  --iv-border: var(--mantine-color-dark-4);
+  --iv-border-light: var(--mantine-color-dark-5);
+  --iv-text-1: var(--mantine-color-text);
+  --iv-text-2: var(--mantine-color-dimmed);
+  --iv-text-3: var(--mantine-color-dimmed);
+  /* 黑白按钮：暗色白底黑字 */
+  --iv-btn-bg: var(--mantine-color-white);
+  --iv-btn-color: var(--mantine-color-black);
+  --iv-btn-bg-hover: var(--mantine-color-gray-2);
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--mantine-color-gray-4);
+  border-radius: 4px;
+}
+[data-mantine-color-scheme='dark'] ::-webkit-scrollbar-thumb {
+  background: var(--mantine-color-dark-3);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mantine-color-gray-5);
+}
+[data-mantine-color-scheme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: var(--mantine-color-dark-2);
+}
+
+/* CodeMirror 编辑器 */
+.cm-editor {
+  height: 100%;
+  font-size: 14px;
+  background: transparent;
+}
+.cm-editor .cm-scroller {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, Menlo, monospace;
+}
+.cm-editor.cm-focused {
+  outline: none;
+}
+.cm-gutters {
+  background: transparent !important;
+  border-right: 1px solid var(--iv-border-light) !important;
+}
+
+/* ============================================================
+   语法补全弹窗（VSCode 风格）：紧凑、图标 + 名称 + 类型标签
+   ============================================================ */
+.cm-tooltip.cm-tooltip-autocomplete {
+  border: 1px solid var(--iv-border);
+  border-radius: var(--iv-radius-sm);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+  background: var(--iv-bg-elevated);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+  padding: 2px;
+  max-height: 280px;
+}
+.cm-tooltip-autocomplete > ul {
+  font-family: inherit;
+  font-size: inherit;
+  max-height: 276px;
+}
+.cm-tooltip-autocomplete > ul > li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  line-height: 1.3;
+  color: var(--iv-text-1);
+  border-radius: 3px;
+}
+.cm-tooltip-autocomplete > ul > li .cm-completionIcon {
+  color: var(--mantine-primary-color-filled);
+  opacity: 0.9;
+  margin-right: 2px;
+}
+.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionIcon {
+  color: #fff;
+  opacity: 1;
+}
+.cm-completionLabel {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, Menlo, monospace;
+  font-size: 14px;
+  color: var(--iv-text-1);
+  flex: 1;
+}
+.cm-completionType {
+  color: var(--iv-text-3);
+  font-size: 12px;
+  font-family: -apple-system, 'Segoe UI', sans-serif;
+  flex-shrink: 0;
+}
+.cm-completionMatchedText {
+  text-decoration: none !important;
+  font-weight: 600;
+}
+.cm-tooltip-autocomplete > ul > li[aria-selected] {
+  background: var(--mantine-primary-color-filled);
+  color: #fff;
+}
+.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionLabel,
+.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionType {
+  color: #fff;
+}
+
+/* 通用工具类 */
+.iv-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-spacing-sm);
+  padding: 0 var(--iv-spacing-md);
+  height: var(--iv-bar-height);
+  flex-shrink: 0;
+  background: var(--iv-bg-panel);
+  border-bottom: 1px solid var(--iv-border);
+}
+.iv-section-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--iv-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 编辑区/结果区 垂直分割条：细条 + 中间握把，hover/拖拽时高亮 */
+.iv-resize-h {
+  height: 6px;
+  flex-shrink: 0;
+  cursor: row-resize;
+  position: relative;
+  background: var(--iv-bg-panel);
+  transition: background 0.15s ease;
+}
+.iv-resize-h::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--iv-border);
+  transition: background 0.15s ease;
+}
+.iv-resize-h:hover,
+.iv-resize-h:active {
+  background: var(--iv-bg-app);
+}
+.iv-resize-h:hover::before,
+.iv-resize-h:active::before {
+  background: var(--mantine-primary-color-filled);
+}
+
+/* ============================================================
+   全局右键菜单子菜单（ContextMenu.tsx）：hover 展开右侧飞出面板。
+   子面板是父项的 DOM 后代，指针移入后父项 :hover 保持，不会闪断；
+   left 覆盖 1px 消除移动间隙。
+   ============================================================ */
+.iv-ctx-item {
+  position: relative;
+}
+.iv-ctx-sub {
+  display: none;
+  position: absolute;
+  left: calc(100% - 1px);
+  top: -5px;
+  min-width: 140px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--iv-bg-elevated);
+  border: 1px solid var(--iv-border);
+  border-radius: var(--mantine-radius-sm);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  padding: 4px;
+  z-index: 1;
+}
+.iv-ctx-item:hover > .iv-ctx-sub {
+  display: block;
+}
+
+/* ============================================================
+   Mantine Tabs 内容区撑满高度：面板默认 padding 0 + flex 拉伸
+   ============================================================ */
+.iv-tabs-fill {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.iv-tabs-fill .mantine-Tabs-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   Sidebar 对象浏览器美化（自实现树）
+   ============================================================ */
+.iv-sidebar {
+  font-size: 16px;
+}
+.iv-sidebar-header {
+  height: var(--iv-bar-height);
+  padding: 0 var(--iv-spacing-sm) 0 var(--iv-spacing-md);
+  border-bottom: 1px solid var(--iv-border);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.iv-sidebar-header .iv-section-title {
+  font-size: 16px;
+}
+.iv-sidebar-search {
+  padding: 6px 8px 4px;
+  border-bottom: 1px solid var(--iv-border-light);
+  flex-shrink: 0;
+}
+.iv-sidebar-tree {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 8px 4px 12px;
+}
+.iv-sidebar-state {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--iv-text-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 树节点行：hover 高亮，点击展开 */
+.iv-tree-node-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: var(--iv-radius-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease;
+}
+.iv-tree-node-row:hover {
+  background: var(--mantine-color-gray-1);
+}
+[data-mantine-color-scheme='dark'] .iv-tree-node-row:hover {
+  background: var(--mantine-color-dark-5);
+}
+/* 展开箭头：旋转动画 */
+.iv-tree-chevron {
+  flex-shrink: 0;
+  display: inline-flex;
+  transition: transform 0.15s ease;
+  color: var(--iv-text-3);
+}
+.iv-tree-chevron-open {
+  transform: rotate(90deg);
+}
+.iv-tree-chevron-placeholder {
+  flex-shrink: 0;
+  width: 16px;
+}
+/* 子节点缩进 */
+.iv-tree-children {
+  margin-left: 12px;
+  border-left: 1px solid var(--iv-border-light);
+  padding-left: 4px;
+}
+.iv-tree-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+.iv-tree-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 14px;
+}
+.iv-tree-empty {
+  color: var(--iv-text-3);
+  font-style: italic;
+  font-size: 12px;
+  padding: 3px 6px;
+}
+.iv-tree-badge {
+  flex-shrink: 0;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: var(--mantine-color-gray-2);
+  color: var(--mantine-color-gray-7);
+}
+[data-mantine-color-scheme='dark'] .iv-tree-badge {
+  background: var(--mantine-color-dark-4);
+  color: var(--mantine-color-gray-3);
+}
+
+/* 底部状态栏 */
+.iv-sidebar-footer {
+  padding: 6px 12px;
+  border-top: 1px solid var(--iv-border);
+  color: var(--iv-text-3);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.iv-sidebar-footer-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.iv-sidebar-footer-count {
+  flex-shrink: 0;
+  color: var(--iv-text-3);
+  font-size: 11px;
+}
+.iv-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.iv-dot-live {
+  background: var(--mantine-color-green-6);
+  box-shadow: 0 0 0 2px var(--mantine-color-green-1);
+}
+
+/* ============================================================
+   黑白按钮：覆盖 Mantine Button 的 CSS 变量（--button-bg/color 在
+   按钮 inline style 上，必须 !important 才能压过）。
+   仅影响 filled 变体（subtle/transparent 等工具栏图标按钮保持透明）。
+   ============================================================ */
+/* Mantine 对默认 variant（filled）省略 data-variant 属性，两种形态都要匹配 */
+.mantine-Button-root:not([data-variant]),
+.mantine-Button-root[data-variant='filled'] {
+  --button-bg: var(--iv-btn-bg) !important;
+  --button-color: var(--iv-btn-color) !important;
+  --button-hover: var(--iv-btn-bg-hover) !important;
+  border-color: transparent !important;
+}
+.mantine-Button-root:not([data-variant]):hover,
+.mantine-Button-root[data-variant='filled']:hover {
+  background-color: var(--iv-btn-bg-hover) !important;
+}
+
+/* ============================================================
+   MRT 结果表格：行选择高亮走 --row-bg 变量（SingleMrTable 内联设置），
+   固定列（序号/time）由列 meta 驱动 CSS sticky
+   ============================================================ */
+
+/* 表格区域禁止浏览器文本选择（复制走单元格右键菜单 clipboard API，不影响） */
+.mrt-table-container {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 结果表格内容居中：表体单元格由 Cell 组件 flex 居中；表头 th 的 text-align 对
+   其内部 flex 容器无效，需直接给 th 的直接子 flex 容器居中 */
+.mrt-table-container .m_4e7aa4f3 {
+  text-align: center;
+}
+.mrt-table-container .m_4e7aa4f3 > div {
+  justify-content: center;
+}
+
+/* 固定列（sticky）单元格背景：读行上的 --row-bg（选中态由行 props 驱动），
+   不透明防止滚动内容穿透。不用 inline 背景（会压过 MRT 的 hover 规则，
+   导致固定列 hover 不变色——MRT 的 tr:hover td 选择器优先级更高，hover 时覆盖这里） */
+.iv-table-sticky-cell {
+  background: var(--row-bg, light-dark(var(--mantine-color-body), var(--mantine-color-dark-6)));
+}
+
+/* 列宽拖拽手柄：默认完全透明（不留常驻灰色背景），hover/active 拖拽时才显示
+   提示色，保持拖拽位置可发现（属性选择器避免依赖 CSS Modules hash 类名） */
+.mrt-table-container [class*='MRT_TableHeadCellResizeHandle'] {
+  background: transparent;
+}
+.mrt-table-container [class*='MRT_TableHeadCellResizeHandle']:hover {
+  background: var(--mantine-color-gray-5);
+}
+.mrt-table-container [class*='MRT_TableHeadCellResizeHandle']:active {
+  background: var(--mantine-color-gray-6);
+}
+
+/* Mantine Table 类名（hash 在 Mantine 7.x 内稳定）：
+   table=m_b23fa0ef th=m_4e7aa4f3 td=m_4e7aa4ef
+   外框 + 单元格竖分隔线 + 行间横线。
+   表格字号统一 14px。
+   两个坑：
+   1) 行间横线不能画在 tr 上——MRT 虚拟化行是 absolute 定位的 tr，脱离表格布局后
+      border-collapse 将其边框丢弃（computed 有值但不绘制）
+   2) 也不能用 td 的 border-bottom——它计入行高（实际行高 44+），而虚拟化行按
+      estimateSize(43) 间隔定位，每行与下一行重叠 1px+，下一行不透明背景盖住
+      上一行的 border。用 box-shadow inset 画线（不占布局高度，永不重叠） */
+.m_4e7aa4f3,
+.m_4e7aa4ef {
+  font-size: 14px;
+}
+.m_b23fa0ef {
+  border: 1px solid var(--iv-border);
+}
+.m_4e7aa4f3,
+.m_4e7aa4ef {
+  border-right: 1px solid var(--iv-border);
+}
+.m_4e7aa4ef {
+  box-shadow: inset 0 -1px 0 var(--iv-border);
+}
+/* 表头底色下加深色底边，与表体分隔更清晰 */
+.m_4e7aa4f3 {
+  border-bottom: 1px solid var(--iv-border);
+}

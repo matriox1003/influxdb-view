@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- script-src 需含 blob:：xlsx 导出 Worker 以 ?worker&inline（Blob URL）加载 -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';" />
+    <title>InfluxDB View</title>
+    <!-- 启动遮罩：内联样式才能在 JS 大包加载完成、首帧渲染时即刻显示，
+         覆盖掉启动阶段那个纯色空白窗口；由 main.tsx 在 React 挂载后淡出。 -->
+    <style>
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* 与 BrowserWindow backgroundColor(#17191f) 衔接，叠一层品牌蓝的径向泛光做质感 */
+        background: radial-gradient(1100px 760px at 50% 42%, rgba(30, 155, 255, 0.13), rgba(0, 0, 0, 0) 62%), #17191f;
+        transition: opacity 0.4s ease;
+        will-change: opacity;
+      }
+      #app-splash.iv-splash-hide {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .iv-splash-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+      .iv-splash-icon {
+        width: 92px;
+        height: 92px;
+        margin-bottom: 22px;
+        /* 品牌蓝柔和投影光晕 + 缓慢呼吸，避免死板 */
+        filter: drop-shadow(0 10px 28px rgba(30, 155, 255, 0.35));
+        animation: iv-splash-pulse 2.6s ease-in-out infinite;
+      }
+      .iv-splash-icon svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      .iv-splash-title {
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        color: rgba(255, 255, 255, 0.96);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      }
+      .iv-splash-sub {
+        margin-top: 6px;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        color: rgba(255, 255, 255, 0.55);
+      }
+      .iv-splash-bar {
+        position: relative;
+        margin-top: 34px;
+        width: 180px;
+        height: 3px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+      }
+      .iv-splash-bar span {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 45%;
+        border-radius: 2px;
+        background: linear-gradient(90deg, rgba(63, 183, 255, 0), #3fb7ff, #0072d8, rgba(63, 183, 255, 0));
+        animation: iv-splash-slide 1.4s ease-in-out infinite;
+      }
+      @keyframes iv-splash-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.035); }
+      }
+      @keyframes iv-splash-slide {
+        from { transform: translateX(-110%); }
+        to { transform: translateX(330%); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app-splash">
+      <div class="iv-splash-inner">
+        <div class="iv-splash-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+            <rect x="16" y="16" width="480" height="480" rx="104" ry="104" fill="url(#bg)"/>
+            <rect x="16" y="16" width="480" height="240" rx="104" ry="104" fill="url(#gloss)" opacity="0.35"/>
+            <g transform="translate(256,256) scale(12.6) translate(-12,-12)" fill="#ffffff">
+              <path d="M23.778 14.482l-2.287-9.959c-.13-.545-.624-1.09-1.169-1.248L9.87.051C9.74 0 9.584 0 9.426 0c-.443 0-.909.18-1.222.443L.716 7.412C.3 7.776.092 8.504.222 9.024l2.445 10.662c.13.545.624 1.092 1.169 1.248l9.775 3.015c.13.051.285.051.443.051.443 0 .91-.18 1.223-.443l8.007-7.435c.418-.39.624-1.092.494-1.64zM10.962 2.417l7.175 2.21c.285.08.285.21 0 .286l-3.77.858c-.285.08-.674-.05-.883-.26l-2.626-2.834c-.235-.232-.184-.336.104-.26zm4.47 12.872c.079.286-.105.444-.39.365l-7.748-2.392c-.285-.079-.338-.313-.13-.52l5.93-5.514c.209-.209.443-.13.52.156zM2.667 8.267l6.293-5.85c.21-.209.545-.18.754.025L12.86 5.85c.209.21.18.545-.026.754l-6.293 5.85c-.21.21-.545.181-.754-.025L2.64 9.024a.536.536 0 01.026-.757zm1.536 9.284L2.54 10.244c-.08-.285.05-.34.234-.13L5.4 12.949c.209.209.285.624.209.909L4.462 17.55c-.079.285-.208.285-.26 0zm9.202 4.264l-8.217-2.522a.547.547 0 01-.364-.675l1.378-4.421a.547.547 0 01.675-.365l8.216 2.522c.285.079.443.39.364.675L14.08 21.45a.553.553 0 01-.674.365zm7.279-5.98L15.2 20.93c-.209.209-.31.13-.234-.155l1.144-3.694c.079-.285.39-.573.674-.624l3.77-.858c.288-.076.339.054.13.234zm.598-1.09l-4.523 1.039a.534.534 0 01-.65-.39l-1.922-8.372a.534.534 0 01.39-.65L19.1 5.335a.534.534 0 01.649.39l1.923 8.371c.079.31-.102.596-.39.65Z"/>
+            </g>
+            <defs>
+              <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#3FB7FF"/>
+                <stop offset="55%" stop-color="#1E9BFF"/>
+                <stop offset="100%" stop-color="#0072D8"/>
+              </linearGradient>
+              <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="iv-splash-title">InfluxDB View</div>
+        <div class="iv-splash-sub">InfluxDB 1.x 客户端</div>
+        <div class="iv-splash-bar"><span></span></div>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

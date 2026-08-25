@@ -1,0 +1,18 @@
+allowBuilds:
+  electron: true
+  esbuild: true
+
+# ── 下载镜像：兼容 npm 11 之前 / 之后 ─────────────────────────
+# 唯一且跨版本生效的机制是「环境变量」，定义在项目根目录的 .env：
+#   ELECTRON_MIRROR
+#   ELECTRON_BUILDER_BINARIES_MIRROR
+# 由 dotenv-cli 通过 `dotenv -e .env --` 注入到：
+#   npm run setup          （pnpm install，electron postinstall 下载二进制）
+#   npm run package        （electron-builder）
+#   npm run package:win    （electron-builder --win）
+# 环境变量不受 npm 版本影响，因此 npm 11 之前/之后都能走 npmmirror 镜像。
+#
+# 说明：npm 11 会把 .npmrc 里的 electron_mirror 等自定义键视为 "Unknown project config"
+# 并提示 deprecation（即将不再支持），因此这里不再在 .npmrc 中声明它们；
+# 全部交给 .env + dotenv-cli 注入。pnpm-workspace.yaml 只是配置构建权限（allowBuilds）
+# 与包元数据，实测 pnpm 11 并不会把 electron_mirror 从这里转发给子进程。

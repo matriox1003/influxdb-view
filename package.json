@@ -1,0 +1,98 @@
+{
+  "name": "influxdb-view",
+  "version": "1.0.0",
+  "description": "InfluxDB 1.x 客户端（类 Navicat）",
+  "author": "influxdb-view",
+  "main": "dist-electron/main.js",
+  "config": {
+    "electron_mirror": "https://registry.npmmirror.com/-/binary/electron/",
+    "electron_builder_binaries_mirror": "https://registry.npmmirror.com/-/binary/electron-builder-binaries/"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n VITE,ELECTRON -c blue,magenta \"vite\" \"wait-on tcp:5173 && tsc -p electron/tsconfig.json && cross-env NODE_ENV=development VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
+    "dev:vite": "vite",
+    "dev:electron": "tsc -p electron/tsconfig.json && cross-env NODE_ENV=development electron .",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "build:renderer": "vite build",
+    "build": "npm run build:electron && npm run build:renderer",
+    "generate-icons": "node scripts/generate-icons.mjs",
+    "setup": "dotenv -e .env -- pnpm install",
+    "package": "npm run clean && npm run generate-icons && npm run build && dotenv -e .env -- electron-builder --publish never",
+    "package:win": "npm run clean && npm run generate-icons && npm run build && dotenv -e .env -- electron-builder --win --publish never",
+    "clean": "node -e \"const{rmSync,renameSync,existsSync}=require('fs');const r='dist-release';if(existsSync(r)){try{rmSync(r,{recursive:true,force:true})}catch(e){try{const b=r+'.old';renameSync(r,b);rmSync(b,{recursive:true,force:true})}catch{}}}\"",
+    "lint": "echo \"no linter configured\""
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.8.1",
+    "@codemirror/lang-sql": "^6.8.0",
+    "@codemirror/language": "^6.11.0",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/theme-one-dark": "^6.1.3",
+    "@codemirror/view": "^6.36.4",
+    "@mantine/core": "7.17.8",
+    "@mantine/dates": "7.17.8",
+    "@mantine/form": "7.17.8",
+    "@mantine/hooks": "7.17.8",
+    "@mantine/notifications": "7.17.8",
+    "@tabler/icons-react": "^3.46.0",
+    "clsx": "^2.1.1",
+    "codemirror": "^6.0.1",
+    "dayjs": "^1.11.21",
+    "electron-updater": "^6.8.9",
+    "mantine-react-table": "2.0.0-beta.9",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "xlsx": "^0.18.5",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "dotenv-cli": "^11.0.0",
+    "electron": "^31.7.7",
+    "electron-builder": "^25.1.8",
+    "resedit": "^3.0.2",
+    "sharp": "^0.35.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.influxdbview.app",
+    "productName": "InfluxDB View",
+    "icon": "assets/icon.png",
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "directories": {
+      "output": "dist-release"
+    },
+    "win": {
+      "icon": "assets/icon.png",
+      "sign": null,
+      "signtoolOptions": {
+        "sign": null
+      },
+      "signAndEditExecutable": false,
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "afterPack": "./scripts/set-icon.cjs",
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "InfluxDB-View-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "InfluxDB-View-Portable-${version}.${ext}"
+    }
+  }
+}

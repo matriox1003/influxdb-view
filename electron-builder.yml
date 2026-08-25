@@ -1,0 +1,31 @@
+appId: com.influxdbview.app
+productName: InfluxDB View
+icon: assets/icon.png
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+
+directories:
+  output: release
+
+win:
+  icon: assets/icon.png
+  signAndEditExecutable: false
+  target:
+    - nsis
+    - portable
+
+mac:
+  icon: assets/icon.png
+  target:
+    - dmg
+
+linux:
+  icon: assets/icon.png
+  target:
+    - AppImage
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

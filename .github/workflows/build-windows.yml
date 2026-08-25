@@ -1,0 +1,122 @@
+name: Build Windows Installer
+
+on:
+  # 只在打 tag 时构建（v*），推 main 分支不触发构建，避免产生无用构建。
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# Release 步骤需要写权限（基于 GITHUB_TOKEN 创建 Release）
+permissions:
+  contents: write
+
+concurrency:
+  # 串行化 tag 构建，避免并发并行时多个 tag 的 Release 发布时间竞态：
+  # GitHub 按 published_at 选 latest，较旧版本可能意外成为 latest
+  # （实测 v1.1.17 比 v1.1.18 晚 2 秒发布，latest 被错标到 1.1.17）。
+  # 共享 group + 不取消，使 tag 构建按触发顺序逐个执行，最高版本最后
+  # 发布 → 成为 latest，恰是更新链路测试想要的结果。
+  group: build-windows-tag
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Release body 需要 tag 注解消息，必须拉全历史（默认浅克隆拿不到）
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      # 缓存 electron-builder 工具链（nsis / winCodeSign 等，数十 MB）
+      - name: Cache electron-builder binaries
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\electron-builder\Cache
+          key: electron-builder-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      # 注意：必须用 `pnpm run setup`，`pnpm setup` 是 pnpm 内建全局命令
+      # 脚本内部经 dotenv-cli 注入 .env 中的镜像变量（ELECTRON_MIRROR 等）
+      # dotenv-cli 不覆盖已存在的环境变量：此处改用官方源（runner 在海外，直连 GitHub 更快更稳）
+      - name: Install dependencies
+        env:
+          ELECTRON_MIRROR: https://github.com/electron/electron/releases/download/
+        run: pnpm run setup --frozen-lockfile
+
+      - name: Build & package (NSIS + portable)
+        env:
+          ELECTRON_MIRROR: https://github.com/electron/electron/releases/download/
+          ELECTRON_BUILDER_BINARIES_MIRROR: https://github.com/electron-userland/electron-builder-binaries/releases/download/
+          ELECTRON_BUILDER_DEBUG: '1'
+          # 发布职责由下方 Release 步骤（softprops）负责；
+          # electron-builder 的 CI 自动发布已在 package.json 中以 --publish never 禁用
+        run: |
+          pnpm run package:win 2>&1 | Tee-Object -FilePath build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # 失败时把构建日志推到 ci-logs/<run-id> 分支，便于免认证排查
+      - name: Publish build log (on failure)
+        if: failure()
+        shell: pwsh
+        run: |
+          Get-Content build.log -Tail 60
+          $headers = @{ Authorization = "Bearer $env:GITHUB_TOKEN"; Accept = 'application/vnd.github+json' }
+          $repo = $env:GITHUB_REPOSITORY
+          $content = [Convert]::ToBase64String([IO.File]::ReadAllBytes('build.log'))
+          $blob = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/$repo/git/blobs" -Headers $headers -Body (@{ content = $content; encoding = 'base64' } | ConvertTo-Json)
+          $tree = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/$repo/git/trees" -Headers $headers -Body (@{ tree = @(@{ path = "run-$($env:GITHUB_RUN_ID).log"; mode = '100644'; type = 'blob'; sha = $blob.sha }) } | ConvertTo-Json -Depth 5)
+          $commit = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/$repo/git/commits" -Headers $headers -Body (@{ tree = $tree.sha; message = "CI build log run $($env:GITHUB_RUN_ID)" } | ConvertTo-Json)
+          $branch = "ci-logs/$($env:GITHUB_RUN_ID)"
+          Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/$repo/git/refs" -Headers $headers -Body (@{ ref = "refs/heads/$branch"; sha = $commit.sha } | ConvertTo-Json) | Out-Null
+          "log published to branch $branch"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 导出 tag 注解消息（去掉首行 tag 名，只留正文），供 Release body 使用。
+      # 注意：actions/checkout 在 tag 事件下不一定带回 tag 注解对象（历史上
+      # 所有 Release 的网页 body 因此是空的），先显式 fetch 触发本流程的
+      # tag 再导出；末行打印字节数，便于在日志里确认导出是否成功。
+      - name: Export tag message
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          git tag -l --format='%(contents)' "${GITHUB_REF_NAME}" | tail -n +2 > tag_message.txt
+          echo "tag_message.txt: $(wc -c < tag_message.txt) bytes"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: InfluxDBView-Windows
+          path: |
+            dist-release/*.exe
+            dist-release/*.exe.blockmap
+            dist-release/latest.yml
+          if-no-files-found: error
+
+      # 推送 v* 标签时自动创建 Release 并附带安装包
+      # body 用 tag 注解消息（手写中文说明），不用 generate_release_notes
+      # （自动生成的英文 "Full Changelog" 对应用内发布说明不友好）
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist-release/*.exe
+            dist-release/*.exe.blockmap
+            dist-release/latest.yml
+          body_path: tag_message.txt
