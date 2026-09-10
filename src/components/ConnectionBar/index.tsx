@@ -10,6 +10,7 @@ import {
   IconRefresh,
   IconCheck,
   IconChevronDown,
+  IconAdjustments,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useConnectionStore } from '@/store/useConnectionStore';
@@ -17,6 +18,7 @@ import { useThemeStore } from '@/store/useThemeStore';
 import { useWorkspaceStore } from '@/store/useWorkspaceStore';
 import { useDatabaseStore } from '@/store/useDatabaseStore';
 import { ConnectionManager } from './ConnectionManager';
+import { SettingsModal } from '@/components/SettingsModal';
 import { getUpdaterApi } from '@/types';
 import { useState } from 'react';
 
@@ -31,6 +33,7 @@ export function ConnectionBar() {
   const openAdmin = useWorkspaceStore((s) => s.openAdmin);
   const openWrite = useWorkspaceStore((s) => s.openWrite);
   const [managerVisible, setManagerVisible] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
   const [appVersion, setAppVersion] = useState('');
 
   // 当前应用版本号（主进程 app.getVersion()），设置菜单显示用
@@ -131,7 +134,7 @@ export function ConnectionBar() {
 
         <div style={{ flex: 1 }} />
 
-        {/* 设置菜单：版本信息 + 检查更新 */}
+        {/* 设置菜单：版本信息 + 设置（网络代理）+ 检查更新 */}
         <Menu shadow="md" width={220} position="bottom-end" withinPortal>
           <Menu.Target>
             <Button variant="subtle" size="compact-sm" rightSection={<IconChevronDown size={12} />}>
@@ -140,6 +143,10 @@ export function ConnectionBar() {
           </Menu.Target>
           <Menu.Dropdown>
             <Menu.Label>{appVersion ? `v${appVersion}` : '版本'}</Menu.Label>
+            <Menu.Item leftSection={<IconAdjustments size={14} />} onClick={() => setSettingsVisible(true)}>
+              设置（网络代理）
+            </Menu.Item>
+            <Menu.Divider />
             <Menu.Item onClick={() => window.dispatchEvent(new CustomEvent('iv:open-update'))}>
               检查更新
             </Menu.Item>
@@ -161,6 +168,9 @@ export function ConnectionBar() {
 
       {/* 连接管理弹窗 */}
       <ConnectionManager visible={managerVisible} onClose={() => setManagerVisible(false)} />
+
+      {/* 设置弹窗（网络代理） */}
+      <SettingsModal opened={settingsVisible} onClose={() => setSettingsVisible(false)} />
     </>
   );
 }

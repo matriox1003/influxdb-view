@@ -11,6 +11,7 @@ import type {
   WriteResult,
 } from '../types';
 import { getConfigById } from './connection';
+import { getProxyAgentForUrl } from '../proxy';
 
 /** 用于直接发请求的最小连接信息（既可来自已保存配置，也可来自表单） */
 export interface RequestConn {
@@ -81,26 +82,41 @@ function getAgent(c: RequestConn): http.Agent | https.Agent {
   return c.tls ? SHARED_AGENT.https : SHARED_AGENT.http;
 }
 
-/** 核心请求方法：底层用 Node http/https 模块，避开渲染层 CORS */
-function request(
+/** 核心请求方法：底层用 Node http/https 模块，避开渲染层 CORS。
+ *  代理开启时（见 electron/proxy.ts）改用对应的代理 Agent（HTTP 隧道 / SOCKS5），
+ *  关闭或命中直连名单时仍走上面的共享 Agent，连接复用策略不变。 */
+async function request(
   conn: RequestConn,
   url: string,
   options: { method: 'GET' | 'POST'; authHeader?: string; body?: string; headers?: Record<string, string> },
   timeoutMs = 15000,
 ): Promise<{ statusCode: number; body: string; headers: http.IncomingHttpHeaders }> {
+  const isHttps = url.startsWith('https');
+  const lib = isHttps ? https : http;
+  // undefined = 直连（代理未启用 / 目标在本机局域网 / 命中直连名单）
+  const agent = (await getProxyAgentForUrl(url)) ?? getAgent(conn);
+
   return new Promise((resolve, reject) => {
-    const lib = url.startsWith('https') ? https : http;
+    let connectTimer: NodeJS.Timeout | null = null;
+    const clearConnectTimer = (): void => {
+      if (connectTimer) {
+        clearTimeout(connectTimer);
+        connectTimer = null;
+      }
+    };
+
     const req = lib.request(
       url,
       {
         method: options.method,
-        agent: getAgent(conn),
+        agent,
         headers: {
           ...(options.authHeader ? { Authorization: options.authHeader } : {}),
           ...options.headers,
         },
       },
       (res) => {
+        clearConnectTimer(); // 已建立连接，后续交给下面的空闲超时
         const chunks: Buffer[] = [];
         res.on('data', (c) => chunks.push(c));
         res.on('end', () => {
@@ -112,7 +128,18 @@ function request(
         });
       },
     );
-    req.on('error', (err) => reject(err));
+
+    // 建连阶段（含代理握手 / CONNECT 隧道）也纳入超时：代理不可达时
+    // socket 还没建立，setTimeout 的空闲超时不会触发，请求会一直挂着
+    connectTimer = setTimeout(() => {
+      req.destroy(new Error('请求超时'));
+    }, timeoutMs);
+    // 拿到 socket（代理场景为隧道建立完成）即撤销建连超时
+    req.on('socket', clearConnectTimer);
+    req.on('error', (err) => {
+      clearConnectTimer();
+      reject(err);
+    });
     req.setTimeout(timeoutMs, () => {
       req.destroy(new Error('请求超时'));
     });

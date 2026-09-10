@@ -113,6 +113,9 @@ function registerIpc(): void {
   // 应用更新（electron-updater + GitHub Releases）
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   require('./ipc/updater').registerUpdaterIpc();
+  // 网络代理（不使用 / 系统 / 自定义）
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('./ipc/proxy').registerProxyIpc();
 
   // 窗口控制（供自绘标题栏按钮调用）
   ipcMain.on('window:minimize', () => BrowserWindow.getFocusedWindow()?.minimize());
@@ -160,7 +163,7 @@ function cleanupUpdateProgressDir(): void {
   setTimeout(() => attempt(0), 35_000).unref();
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // 更新进度窗口模式：以 --update-progress 再入（独立进程），只显示进度条
   if (process.argv.includes('--update-progress')) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -169,6 +172,10 @@ app.whenReady().then(() => {
   }
 
   registerIpc();
+  // 先载入代理设置并下发到网络会话，再建窗口：
+  // 保证用户在启动后立刻点「检查更新」时，代理规则已经就位
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  await require('./proxy').initProxy();
   createWindow();
   cleanupUpdateProgressDir();
 

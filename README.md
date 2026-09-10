@@ -35,6 +35,7 @@ A desktop client for InfluxDB **1.x** with a Navicat-like experience. Built with
   INSERT INTO cpu(host=s1, region=us) value=0.64, temp=45
   ```
 - **界面**：自定义无边框标题栏（macOS 保留红绿灯按钮）、亮色 / 暗色 / 跟随系统三态主题并持久化。
+- **网络代理**：设置中可在 **不使用代理 / 使用系统代理 / 自定义代理**（HTTP / HTTPS / SOCKS5，支持认证）之间切换，对 InfluxDB 连接与应用更新同时生效；本机与局域网地址默认直连（可关闭），并支持直连名单通配。
 - **自动更新**：基于 GitHub Releases（electron-updater），启动时静默检查，顶栏可手动检查、下载（带进度）并一键安装。
 - **安全**：渲染层关闭 `nodeIntegration`、开启 `contextIsolation`，仅通过 preload 白名单 IPC 访问 Node 能力；所有 InfluxDB 请求在主进程发起，规避浏览器 CORS。
 
@@ -68,6 +69,10 @@ pnpm dev
 
 > 修改 `electron/` 下的主进程代码需要重启 `pnpm dev` 才会生效。
 
+> 关闭应用窗口时 Vite 会一并被结束，而 `concurrently` 默认会把「被杀进程」的非零退出码算作失败，终端会报 `ELIFECYCLE Command failed with exit code 1`。所以脚本用 `-s command-ELECTRON` 让整体退出码只跟随 Electron：正常关窗退出码为 0，只有 Electron 自身异常退出才会报错。
+
+> 开发环境（未打包）下点击「检查更新」会直接提示「当前为开发环境，不支持应用内更新」，不会去请求 GitHub，也不会在终端刷出 electron-updater 的 `Skip checkForUpdates` 日志。
+
 #### 连接到 InfluxDB
 
 1. 启动一个 InfluxDB 1.x 实例（例如本地 `http://localhost:8086`）。
@@ -92,8 +97,10 @@ influxdb-view/
 │   ├── main.ts                # 窗口、生命周期、IPC 注册
 │   ├── preload.ts             # contextBridge 安全暴露 API
 │   ├── types.ts               # 主/渲染共享类型
+│   ├── proxy.ts               # 网络代理（三态模式、代理 Agent、系统代理解析）
 │   └── ipc/
 │       ├── connection.ts      # 连接 CRUD + safeStorage 加密
+│       ├── proxy.ts           # 代理设置 IPC
 │       └── influx.ts          # InfluxDB HTTP 客户端（ping/query/write）+ 收藏查询持久化
 ├── src/                       # 渲染进程（React）
 │   ├── main.tsx               # 入口
@@ -108,6 +115,7 @@ influxdb-view/
 │   │   ├── AdminPanel/        # 数据库/RP/CQ/用户管理
 │   │   ├── DataManager/       # 数据写入（类 SQL → Line Protocol）
 │   │   ├── TitleBar.tsx       # 自定义无边框标题栏
+│   │   ├── SettingsModal.tsx  # 设置弹窗（网络代理三态）
 │   │   ├── ContextMenu.tsx    # 通用右键菜单
 │   │   ├── ErrorDialog.tsx    # 错误提示弹窗
 │   │   └── ThemeProvider.tsx
@@ -144,6 +152,9 @@ InfluxDB 1.x HTTP API 不支持 `USE` 语句，目标库必须通过 `?db=` 参�
 **Q：写入数据必须学 Line Protocol 吗？**  
 不必。数据写入页支持类 SQL 语法（`INSERT INTO cpu(host=s1) value=0.64`），保存时自动转换为 Line Protocol；转换失败的行会逐行提示原因。
 
+**Q：设置了代理，为什么访问内网 InfluxDB 没有走代理？**  
+本机与局域网地址（`localhost`、`127.0.0.1`、`10.x`、`172.16-31.x`、`192.168.x`）默认直连，避免内网连接被绕到代理上导致连不上。若内网地址确实需要走代理，在「设置 → 网络代理」中勾选 **对局域网与本机地址也使用代理**，也可用「直连名单」精确指定哪些主机直连。
+
 ---
 
 <a id="english-documentation"></a>
@@ -164,6 +175,7 @@ InfluxDB 1.x HTTP API 不支持 `USE` 语句，目标库必须通过 `?db=` 参�
   INSERT INTO cpu(host=s1, region=us) value=0.64, temp=45
   ```
 - **UI**: Custom frameless title bar (traffic lights preserved on macOS), light / dark / system-follow theme with persistence.
+- **Network Proxy**: Switch between **No proxy / System proxy / Custom proxy** (HTTP / HTTPS / SOCKS5, with authentication) in Settings; applies to both InfluxDB connections and app updates. Loopback and LAN addresses bypass the proxy by default (configurable), plus a wildcard bypass list.
 - **Auto Update**: Silent update checks on startup via GitHub Releases (electron-updater); manual check, download with progress, and one-click install from the top bar.
 - **Security**: `nodeIntegration` disabled and `contextIsolation` enabled in the renderer; Node capabilities are only accessible via a whitelisted preload IPC. All InfluxDB requests are made from the main process, bypassing browser CORS.
 
@@ -197,6 +209,10 @@ Starts both the Vite dev server (`http://localhost:5173`) and the Electron windo
 
 > Changes under `electron/` (main process) require restarting `pnpm dev` to take effect.
 
+> Closing the app window also stops Vite, and `concurrently` treats that killed process's non-zero code as a failure (`ELIFECYCLE Command failed with exit code 1`). The script therefore uses `-s command-ELECTRON` so the overall exit code follows Electron only: closing the window exits 0, while a real Electron failure still fails the command.
+
+> In a development (unpackaged) run, "Check for updates" reports "not supported in development" immediately — it never calls GitHub, and electron-updater's `Skip checkForUpdates` warning no longer floods the terminal.
+
 #### Connect to InfluxDB
 
 1. Start an InfluxDB 1.x instance (e.g. `http://localhost:8086`).
@@ -221,8 +237,10 @@ influxdb-view/
 │   ├── main.ts                # Window, lifecycle, IPC registration
 │   ├── preload.ts             # Secure API exposure via contextBridge
 │   ├── types.ts               # Shared main/renderer types
+│   ├── proxy.ts               # Network proxy (3 modes, proxy agents, system proxy resolution)
 │   └── ipc/
 │       ├── connection.ts      # Connection CRUD + safeStorage encryption
+│       ├── proxy.ts           # Proxy settings IPC
 │       └── influx.ts          # InfluxDB HTTP client (ping/query/write) + saved-query persistence
 ├── src/                       # Renderer process (React)
 │   ├── main.tsx               # Entry
@@ -237,6 +255,7 @@ influxdb-view/
 │   │   ├── AdminPanel/        # DB/RP/CQ/user administration
 │   │   ├── DataManager/       # Data writing (SQL-like → Line Protocol)
 │   │   ├── TitleBar.tsx       # Custom frameless title bar
+│   │   ├── SettingsModal.tsx  # Settings dialog (3 proxy modes)
 │   │   ├── ContextMenu.tsx    # Generic context menu
 │   │   ├── ErrorDialog.tsx    # Error dialog
 │   │   └── ThemeProvider.tsx
@@ -272,6 +291,9 @@ For readability, the time column (RFC3339 or large epoch numbers) is automatical
 
 **Q: Do I have to learn Line Protocol to write data?**  
 No. The data-writing page accepts SQL-like syntax (`INSERT INTO cpu(host=s1) value=0.64`) which is automatically converted to Line Protocol on save; failed conversions are reported line by line.
+
+**Q: Why does my LAN InfluxDB not go through the proxy I configured?**  
+Loopback and LAN addresses (`localhost`, `127.0.0.1`, `10.x`, `172.16-31.x`, `192.168.x`) bypass the proxy by default, so internal connections are not broken by a proxy that cannot reach them. If those addresses really need the proxy, tick **对局域网与本机地址也使用代理** (use the proxy for LAN and loopback addresses too) in Settings → Network Proxy, or use the bypass list to control which hosts connect directly.
 
 ## License
 

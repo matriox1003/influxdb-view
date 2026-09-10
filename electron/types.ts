@@ -97,6 +97,55 @@ export interface SavedQuery {
   createdAt: number;
 }
 
+// ---- 网络代理 ----
+
+/** 代理模式：不使用代理 / 跟随系统代理 / 自定义代理 */
+export type ProxyMode = 'none' | 'system' | 'custom';
+
+/** 自定义代理的协议（socks5 适用于 Clash / v2rayN 等只开 SOCKS 端口的场景） */
+export type ProxyProtocol = 'http' | 'https' | 'socks5';
+
+/** 代理设置（表单输入结构，password 为明文，仅在提交时跨进程传递） */
+export interface ProxySettingsInput {
+  mode: ProxyMode;
+  protocol: ProxyProtocol;
+  host: string;
+  port: number;
+  username?: string;
+  /** 明文密码；留空表示沿用已保存的密码（需要清除时用 clearPassword） */
+  password?: string;
+  /** 置为 true 表示清空已保存的密码 */
+  clearPassword?: boolean;
+  /** 直连名单：逗号 / 分号 / 空白分隔，支持 *.example.com 与 * 通配 */
+  bypass?: string;
+  /** 局域网与本机地址是否也走代理（默认 false：自动直连，避免拖慢内网连接） */
+  proxyPrivateNetworks?: boolean;
+}
+
+/** 代理设置（渲染层读取结构：不含密码明文，仅告知是否已保存密码） */
+export interface ProxySettingsView extends Omit<ProxySettingsInput, 'password' | 'clearPassword'> {
+  hasPassword: boolean;
+}
+
+/** 系统代理探测结果（设置界面展示用） */
+export interface SystemProxyInfo {
+  /** 系统未配置代理（直连） */
+  direct: boolean;
+  /** Chromium 原始返回值，如 "PROXY 127.0.0.1:7890" / "DIRECT" */
+  raw: string;
+  /** 便于阅读的展示文本，如 "127.0.0.1:7890 (HTTP)" */
+  display: string;
+}
+
+/** 代理连通性测试结果 */
+export interface ProxyTestResult {
+  ok: boolean;
+  /** 结果描述（成功或失败原因） */
+  message: string;
+  /** 到代理服务器的 TCP 建连耗时（毫秒） */
+  latencyMs?: number;
+}
+
 /** 检查更新的结果 */
 export interface UpdateCheckResult {
   /** 是否有新版本 */
@@ -113,6 +162,8 @@ export interface UpdateCheckResult {
   error?: string;
   /** 便携版：不支持应用内更新（主进程检测 PORTABLE_EXECUTABLE_DIR 后置位） */
   portable?: boolean;
+  /** 开发环境（未打包）：不发起更新检查，界面据此提示 */
+  dev?: boolean;
 }
 
 /** 下载进度（update:progress 事件载荷） */
@@ -167,6 +218,16 @@ export interface InfluxViewApi {
   // 主题持久化
   getTheme: () => Promise<'light' | 'dark' | 'system'>;
   setTheme: (theme: 'light' | 'dark' | 'system') => Promise<void>;
+
+  // 网络代理
+  /** 读取当前代理设置（不返回密码明文） */
+  getProxySettings: () => Promise<ProxySettingsView>;
+  /** 保存代理设置（立即对 InfluxDB 请求与应用更新生效） */
+  saveProxySettings: (cfg: ProxySettingsInput) => Promise<ProxySettingsView>;
+  /** 探测系统代理（Windows「Internet 选项」/ macOS 网络设置中的代理） */
+  getSystemProxy: () => Promise<SystemProxyInfo>;
+  /** 测试代理服务器连通性（TCP 可达性） */
+  testProxy: (cfg: ProxySettingsInput) => Promise<ProxyTestResult>;
 
   // 收藏查询持久化（按连接隔离）
   /** 读取某连接下的全部收藏查询 */

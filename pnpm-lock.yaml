@@ -59,6 +59,12 @@ importers:
       electron-updater:
         specifier: ^6.8.9
         version: 6.8.9
+      http-proxy-agent:
+        specifier: ^7.0.2
+        version: 7.0.2
+      https-proxy-agent:
+        specifier: ^7.0.6
+        version: 7.0.6
       mantine-react-table:
         specifier: 2.0.0-beta.9
         version: 2.0.0-beta.9(@mantine/core@7.17.8(@mantine/hooks@7.17.8(react@19.2.8))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@mantine/dates@7.17.8(@mantine/core@7.17.8(@mantine/hooks@7.17.8(react@19.2.8))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@mantine/hooks@7.17.8(react@19.2.8))(dayjs@1.11.21)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@mantine/hooks@7.17.8(react@19.2.8))(@tabler/icons-react@3.46.0(react@19.2.8))(clsx@2.1.1)(dayjs@1.11.21)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -68,6 +74,9 @@ importers:
       react-dom:
         specifier: ^19.2.8
         version: 19.2.8(react@19.2.8)
+      socks-proxy-agent:
+        specifier: ^8.0.0
+        version: 8.0.0
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5
@@ -2296,6 +2305,10 @@ packages:
   socks-proxy-agent@7.0.0:
     resolution: {integrity: sha512-Fgl0YPZ902wEsAyiQ+idGd1A7rSFx/ayC1CQVMw5P+EQx2V0SgpGtf6OKFhVjPflPUl9YMmEOnmfjCdMUsygww==}
     engines: {node: '>= 10'}
+
+  socks-proxy-agent@8.0.0:
+    resolution: {integrity: sha512-5tX6GGsT0q6nXjBd/fDtIXxdX9OOOaZjdo5jvtA8fODcP/4Fa2BH+8zfEgxdtyGN4fRVfZcxsSu8vkJILbrD5g==}
+    engines: {node: '>= 14'}
 
   socks@2.8.9:
     resolution: {integrity: sha512-LJhUYUvItdQ0LkJTmPeaEObWXAqFyfmP85x0tch/ez9cahmhlBBLbIqDFnvBnUJGagb0JbIQrkBs1wJ+yRYpEw==}
@@ -4985,6 +4998,14 @@ snapshots:
   socks-proxy-agent@7.0.0:
     dependencies:
       agent-base: 6.0.2
+      debug: 4.4.3
+      socks: 2.8.9
+    transitivePeerDependencies:
+      - supports-color
+
+  socks-proxy-agent@8.0.0:
+    dependencies:
+      agent-base: 7.1.4
       debug: 4.4.3
       socks: 2.8.9
     transitivePeerDependencies:

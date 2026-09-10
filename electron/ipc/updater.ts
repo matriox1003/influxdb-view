@@ -27,6 +27,18 @@ const REPO = { owner: 'matriox1003', repo: 'influxdb-view' };
  *  而便携 exe 本体仍在旧版本——所以便携版禁用应用内更新入口。 */
 const IS_PORTABLE = !!process.env.PORTABLE_EXECUTABLE_DIR;
 
+/** 开发环境（未打包）。
+ *  electron-updater 在未打包时不会真正检查更新，只会在控制台打一行
+ *  "Skip checkForUpdates because application is not packed and dev update
+ *  config is not forced" 然后返回 null —— 渲染层却会据此显示"已是最新版本"，
+ *  既误导用户又刷满 `pnpm dev` 的终端日志。所以这类请求直接在主进程短路，
+ *  由界面给出"开发环境不支持"的正确提示。
+ *  （需要联调更新流程时，可临时开启 autoUpdater.forceDevUpdateConfig 并放置
+ *   dev-app-update.yml，届时把下面的判断去掉即可。） */
+function isDevUnpackaged(): boolean {
+  return !app.isPackaged;
+}
+
 /** 本次更新使用的副本目录名（唯一后缀）。每次复制开始时重置为 null，
  *  progressAppDir() 首次调用时生成 `influxdb-view-update-progress-<ts>`，
  *  保证复制与 spawn 用同一目录，且不复用旧目录。
@@ -371,6 +383,18 @@ export function registerUpdaterIpc(): void {
         portable: true,
       };
     }
+    // 开发环境：不触碰 electron-updater（见 isDevUnpackaged 注释），
+    // 避免"Skip checkForUpdates"刷屏与界面误报"已是最新版本"
+    if (isDevUnpackaged()) {
+      return {
+        available: false,
+        version: null,
+        currentVersion: autoUpdater.currentVersion.version,
+        releaseNotes: null,
+        releaseUrl: null,
+        dev: true,
+      };
+    }
     configureFeed();
     // 注意：autoUpdater.currentVersion 是 semver 的 SemVer 对象，不是字符串。
     // 直接传给渲染层会变成不可序列化的对象，渲染时抛
@@ -418,6 +442,7 @@ export function registerUpdaterIpc(): void {
 
   ipcMain.handle('updater:download', async (): Promise<{ ok: boolean; error?: string }> => {
     if (IS_PORTABLE) return { ok: false, error: '便携版不支持应用内更新' };
+    if (isDevUnpackaged()) return { ok: false, error: '开发环境（未打包）不支持应用内更新' };
     try {
       configureFeed();
       await autoUpdater.downloadUpdate();
@@ -429,7 +454,8 @@ export function registerUpdaterIpc(): void {
 
   // 注意：preload 用 ipcRenderer.send，这里必须用 ipcMain.on（handle 收不到 send）
   ipcMain.on('updater:install', () => {
-    if (IS_PORTABLE) return; // 双保险：便携版不应走到这里（check 已拦截）
+    // 双保险：便携版/开发环境不应走到这里（check 阶段已拦截）
+    if (IS_PORTABLE || isDevUnpackaged()) return;
     void (async () => {
       // 串行等待副本就绪（单飞；正常情况下载完成时就已复制好，这里瞬间通过。
       // 罕见的未就绪场景会阻塞几秒——可接受，且杜绝并发复制损坏副本）。

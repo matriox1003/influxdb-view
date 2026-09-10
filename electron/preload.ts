@@ -45,6 +45,12 @@ const api: InfluxViewApi = {
   getTheme: () => ipcRenderer.invoke('theme:get'),
   setTheme: (theme) => ipcRenderer.invoke('theme:set', theme),
 
+  // 网络代理（不使用 / 系统 / 自定义）
+  getProxySettings: () => ipcRenderer.invoke('proxy:get'),
+  saveProxySettings: (cfg) => ipcRenderer.invoke('proxy:save', cfg),
+  getSystemProxy: () => ipcRenderer.invoke('proxy:systemInfo'),
+  testProxy: (cfg) => ipcRenderer.invoke('proxy:test', cfg),
+
   // 收藏查询（按连接隔离）
   listSavedQueries: (connectionId) => ipcRenderer.invoke('saved:list', connectionId),
   saveSavedQuery: (item) => ipcRenderer.invoke('saved:upsert', item),

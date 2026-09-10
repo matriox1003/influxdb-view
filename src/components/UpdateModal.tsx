@@ -90,7 +90,9 @@ export function UpdateModal({ opened, onClose }: { opened: boolean; onClose: () 
         {api && status === 'checking' && <Text size="sm" c="dimmed">正在检查更新…</Text>}
 
         {api && result && status === 'idle' && (
-          result.portable ? (
+          result.dev ? (
+            <Text size="sm" c="dimmed">当前为开发环境（未打包），不支持应用内更新。</Text>
+          ) : result.portable ? (
             <Stack gap="xs">
               <Text size="sm" c="orange">当前为便携版，不支持应用内更新。</Text>
               {result.releaseUrl && (
