@@ -1,6 +1,6 @@
 {
   "name": "influxdb-view",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "InfluxDB 1.x 客户端（类 Navicat）",
   "author": "influxdb-view",
   "main": "dist-electron/main.js",
